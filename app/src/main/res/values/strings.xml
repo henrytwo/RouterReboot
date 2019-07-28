@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Router Reboot</string>
+    <string name="username">Username</string>
+    <string name="password">Password</string>
+    <string name="ip">Router IP Address</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+</resources>
