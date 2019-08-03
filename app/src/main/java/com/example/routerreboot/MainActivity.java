@@ -2,6 +2,7 @@ package com.example.routerreboot;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 
 import android.content.Context;
 import android.content.DialogInterface;
@@ -12,8 +13,11 @@ import android.os.FileObserver;
 import android.os.Handler;
 import android.os.storage.StorageManager;
 import android.os.storage.StorageVolume;
+import android.text.InputType;
 import android.util.Log;
 import android.view.LayoutInflater;
+
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -48,8 +52,12 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean settingsConfirmed = false;
 
+    private String defaultlog = "";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -60,28 +68,101 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        /*AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
-        LayoutInflater inflater = this.getLayoutInflater();
+        builder.setTitle("Super Cool Setup");
 
-        builder.setView(inflater.inflate(R.layout.dialog_setup, null))
-                .setPositiveButton(R.string.save, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int id) {
+        final AlertDialog alertDialog = builder.create();
 
-                        EditText ipText = (EditText) findViewById(R.id.ip);
-                        EditText usernameText = (EditText) findViewById(R.id.username);
-                        EditText passwordText = (EditText) findViewById(R.id.password);
-
-                        ip = ipText.getText().toString();
-                        username = usernameText.getText().toString();
-                        password = passwordText.getText().toString();
-
-                        Toast.makeText(MainActivity.this, "Settings saved!", Toast.LENGTH_LONG).show();
+        LayoutInflater inflater = this.getLayoutInflater();*/
 
 
-                    }
-                }).show();
+        LayoutInflater layoutInflater = LayoutInflater.from(MainActivity.this);
+        View promptView = layoutInflater.inflate(R.layout.dialog_setup, null);
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(MainActivity.this);
+        alertDialogBuilder.setView(promptView);
+
+        alertDialogBuilder.setTitle("Super Cool Setup");
+
+        final EditText ipText = (EditText) promptView.findViewById(R.id.ip);
+        final EditText usernameText = (EditText) promptView.findViewById(R.id.username);
+        final EditText passwordText = (EditText) promptView.findViewById(R.id.password);
+
+        if (ip.length() > 0) {
+            ipText.setText(ip);
+        }
+
+        if (username.length() > 0) {
+            usernameText.setText(username);
+        }
+
+        if (password.length() > 0) {
+            passwordText.setText(password);
+        }
+
+        alertDialogBuilder.setCancelable(false);
+        alertDialogBuilder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                ip = ipText.getText().toString();
+                username = usernameText.getText().toString();
+                password = passwordText.getText().toString();
+
+                if (username.length() > 0 && ip.length() > 0) {
+
+                    Toast.makeText(MainActivity.this, "Settings saved!", Toast.LENGTH_SHORT).show();
+
+                    defaultlog = String.format("IP: %s\nUsername: %s\nPassword: %s\n\n", ip, username, passwordToStar(password));
+
+                    settingsConfirmed = true;
+
+                    resetLog();
+
+                } else {
+
+                    Toast.makeText(MainActivity.this, "Invalid settings!", Toast.LENGTH_SHORT).show();
+
+                    setupDialog();
+                }
+
+            }
+        });
+
+        // Only allow cancel if settings are confirmed and valid
+        if (settingsConfirmed) {
+            alertDialogBuilder.setNegativeButton("Cancel",
+                    new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            dialog.cancel();
+                        }
+                    });
+        }
+
+
+        // create an alert dialog
+        AlertDialog alert = alertDialogBuilder.create();
+        alert.show();
+    }
+
+    public String passwordToStar(String password) {
+        String buffer = "";
+
+        for (int i = 0; i < password.length(); i++) {
+            buffer += "*";
+        }
+
+        return buffer;
+    }
+
+    public void resetLog() {
+        log = "Router Reboot by Henry Tu\nJuly 2019 | henrytu.me\n\n" + defaultlog;
+
+        TextView tv = (TextView) findViewById(R.id.textbox);
+        tv.setText(log);
+
+    }
+
+    public void settings(View view) {
+        setupDialog();
     }
 
     public void reboot(View view) {
@@ -93,10 +174,7 @@ public class MainActivity extends AppCompatActivity {
                 .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
 
                     public void onClick(DialogInterface dialog, int whichButton) {
-                        log = "Router Reboot by Henry Tu\nJuly 2019 | henrytu.me\n\n";
-
-                        TextView tv = (TextView) findViewById(R.id.textbox);
-                        tv.setText("");
+                        resetLog();
 
                         Thread t = new Thread(new NetworkStuff());
                         t.start();
@@ -117,7 +195,7 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void run() {
 
-                    Log.d("NetworkStuff", line);
+                    Log.wtf("NetworkStuff", line);
 
                     log += "[Log] " + line + "\n";
 
@@ -145,7 +223,6 @@ public class MainActivity extends AppCompatActivity {
 
                 String passwordOut = Hex.encodeHexString(result).toUpperCase();
 
-
                 JSONObject authRequest = request(true, String.format("id=%s&password=%s", username, passwordOut), "http://" + ip + "/authentication.cgi", "uid=" + challengeAndUID.getString("uid"));
 
                 updateLog(authRequest.toString());
@@ -156,7 +233,7 @@ public class MainActivity extends AppCompatActivity {
 
                     // If we made it this far, cookie is active!
 
-                    JSONObject actionRequest = request(true, "EVENT=REBOOT", "http://" + ip + "/serviceasdsa.cgi", "uid=" + challengeAndUID.getString("uid"));
+                    JSONObject actionRequest = request(true, "EVENT=REBOOT", "http://" + ip + "/serviceasd.cgi", "uid=" + challengeAndUID.getString("uid"));
 
                     updateLog(actionRequest.toString());
 
@@ -243,4 +320,5 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+
 }
