@@ -7,6 +7,7 @@ import androidx.appcompat.widget.Toolbar;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.FileObserver;
@@ -54,12 +55,29 @@ public class MainActivity extends AppCompatActivity {
 
     private String defaultlog = "";
 
+    private SharedPreferences sharedPref;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
+        sharedPref = this.getPreferences(Context.MODE_PRIVATE);
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        if (sharedPref.getBoolean("settingsConfirmed", false)) {
+            settingsConfirmed = sharedPref.getBoolean("settingsConfirmed", false);
+            ip = sharedPref.getString("ip", "");
+            username = sharedPref.getString("username", "");
+            password = sharedPref.getString("password", "");
+
+
+            Toast.makeText(MainActivity.this, "Settings loaded!", Toast.LENGTH_SHORT).show();
+
+            defaultlog = String.format("IP: %s\nUsername: %s\nPassword: %s\n\n", ip, username, passwordToStar(password));
+
+            resetLog();
+        }
 
         if (!settingsConfirmed) {
             setupDialog();
@@ -100,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
             passwordText.setText(password);
         }
 
-        alertDialogBuilder.setCancelable(false);
+        alertDialogBuilder.setCancelable(settingsConfirmed);
         alertDialogBuilder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
                 ip = ipText.getText().toString();
@@ -109,11 +127,21 @@ public class MainActivity extends AppCompatActivity {
 
                 if (username.length() > 0 && ip.length() > 0) {
 
+                    settingsConfirmed = true;
+
+                    SharedPreferences.Editor editor = sharedPref.edit();
+
+                    editor.putString("ip", ip);
+                    editor.putString("username", username);
+                    editor.putString("password", password);
+                    editor.putBoolean("settingsConfirmed", settingsConfirmed);
+
+                    editor.commit();
+
                     Toast.makeText(MainActivity.this, "Settings saved!", Toast.LENGTH_SHORT).show();
 
                     defaultlog = String.format("IP: %s\nUsername: %s\nPassword: %s\n\n", ip, username, passwordToStar(password));
 
-                    settingsConfirmed = true;
 
                     resetLog();
 
@@ -233,7 +261,7 @@ public class MainActivity extends AppCompatActivity {
 
                     // If we made it this far, cookie is active!
 
-                    JSONObject actionRequest = request(true, "EVENT=REBOOT", "http://" + ip + "/serviceasd.cgi", "uid=" + challengeAndUID.getString("uid"));
+                    JSONObject actionRequest = request(true, "EVENT=REBOOT", "http://" + ip + "/service.cgi", "uid=" + challengeAndUID.getString("uid"));
 
                     updateLog(actionRequest.toString());
 
